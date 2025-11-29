@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Kamatuoran</title>
+<style>
+  :root{
+    --accent:#b37533; /* warm gold */
+    --deep:#3b2b2b;
+    --paper-fallback:#fbf6ef;
+    --muted:#777;
+
+  }
+
+  /* Loading overlay */
+  #loaderOverlay{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9));
+    z-index:9999; flex-direction:column; gap:18px;
+  }
+  .loader-circle{
+    width:86px; height:86px; border-radius:50%;
+    border:10px solid rgba(179,117,51,0.12);
+    border-top-color:var(--accent);
+    animation:spin 1s linear infinite;
+    box-shadow:0 6px 18px rgba(0,0,0,0.06);
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  #loaderPercent{ font-weight:700; color:var(--deep); letter-spacing:1px; }
+
+  /* sound enable small pill */
+  #soundPill{
+    position:fixed; right:18px; bottom:18px; z-index:9998;
+    background:rgba(255,255,255,0.95); border:1px solid #eee;
+    box-shadow:0 6px 18px rgba(0,0,0,0.06);
+    padding:8px 12px; border-radius:24px; display:flex; gap:10px; align-items:center;
+    cursor:pointer; font-weight:600;
+  }
+
+  /* base page */
+  body{
+    margin:0;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    background-color: var(--paper-fallback);
+    background-image:
+      linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)),
+      url("https://tse1.mm.bing.net/th/id/OIP.w2A7mfT3eNry-ssQ0MyO6QHaEK?rs=1&pid=ImgDetMain&o=7&rm=3");
+    background-size: cover;
+    background-repeat: repeat;
+    color:#222;
+  }
+
+  header{
+    position:sticky; top:0; z-index:100;
+    backdrop-filter: blur(4px);
+    background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.45));
+    border-bottom: 6px solid rgba(183,117,51,0.12);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 26px;
+  }
+  header h1{ margin:0; color:var(--accent); letter-spacing:3px; font-size:20px; cursor:pointer; }
+  nav{ display:flex; gap:10px; align-items:center; }
+  nav button{
+    background:transparent; border:2px solid var(--accent); color:var(--accent);
+    padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600;
+  }
+  nav button:hover{ background:var(--accent); color:white; }
+
+  .kalinga-divider{ height:8px; width:100%; background-image: linear-gradient(90deg,#a11 0 10%, #ffcc66 10% 20%, #a11 20% 30%); background-size:50px 8px; opacity:0.9; }
+
+  .container{ max-width:1150px; margin:24px auto; padding:0 18px; }
+
+  .home-grid{ display:grid; grid-template-columns: 2fr 1fr; gap:20px; align-items:start; }
+  .hero{ background: rgba(255,255,255,0.9); padding:18px; border-radius:12px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); display:flex; flex-direction:column; gap:12px; }
+  .hero img{ width:100%; height:360px; object-fit:cover; border-radius:10px; }
+  .hero h2{ margin:0; color:var(--deep); font-size:28px; }
+  .hero p{ margin:0; color:#333; line-height:1.45; }
+
+  .sidebar{ background: rgba(255,255,255,0.95); padding:14px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+  .editorial{ border-left:4px solid var(--accent); padding-left:12px; margin-bottom:12px; }
+
+  .article-list{ margin-top:18px; display:grid; grid-template-columns: 1fr 1fr; gap:14px; }
+  .article-card{ background: rgba(255,255,255,0.92); padding:12px; border-radius:10px; box-shadow:0 4px 14px rgba(0,0,0,0.06); cursor: pointer; position:relative; overflow:visible; }
+  .article-card img{ width:100%; height:140px; object-fit:cover; border-radius:8px; }
+  .article-card h3{ margin:8px 0 6px; color:var(--accent); }
+  .article-card p{ margin:0; font-size:14px; color:#333; }
+
+  .category-row{ display:flex; gap:18px; justify-content:space-between; margin-top:24px; flex-wrap:wrap; }
+  .category-card{ width:32%; min-width:220px; background:rgba(255,255,255,0.95); border-radius:12px; overflow:hidden; cursor:pointer; box-shadow:0 6px 20px rgba(0,0,0,0.08); position:relative; }
+  .category-card img{ width:100%; height:190px; object-fit:cover; }
+  .category-card h4{ margin:10px; color:var(--accent); text-align:center; }
+  .emoji-widget{
+    position:absolute; left:12px; bottom:12px; display:flex; gap:8px; align-items:center;
+    background:rgba(255,255,255,0.95); padding:6px 8px; border-radius:999px; box-shadow:0 6px 12px rgba(0,0,0,0.06);
+  }
+  .emoji-btn{ font-size:20px; cursor:pointer; user-select:none; padding:6px; border-radius:8px; transition:transform .18s ease; }
+  .emoji-count{ font-size:13px; color:var(--muted); margin-left:6px; font-weight:700; }
+
+  .sub-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:14px; }
+  .sub-box{ background:white; border-radius:10px; overflow:hidden; box-shadow:0 5px 14px rgba(0,0,0,0.06); cursor:pointer; position:relative; }
+  .sub-box img{ width:100%; height:140px; object-fit:cover; }
+  .sub-box h3{ margin:0; padding:10px; background:var(--accent); color:white; text-align:center; }
+
+  .page-section{ background: rgba(255,255,255,0.95); padding:18px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); margin-top:18px; }
+  .back-btn{ display:inline-block; padding:8px 12px; background:var(--accent); color:white; border-radius:8px; border:none; cursor:pointer; margin-bottom:12px; }
+
+  .slider{ display:flex; gap:10px; overflow-x:auto; padding:6px 0; }
+  .slider img{ width:320px; height:200px; object-fit:cover; border-radius:8px; }
+
+  .add-img-btn{ margin-top:10px; padding:8px 12px; background:var(--deep); color:white; border:none; border-radius:8px; cursor:pointer; }
+
+  /* small-floating emoji explosions */
+  .float-emoji{
+    position:fixed; left:0; top:0; pointer-events:none; font-size:28px; transform:translate(-50%,-50%); animation:floatUp 1.2s ease forwards;
+  }
+  @keyframes floatUp{
+    0%{ opacity:1; transform: translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform: translate(-50%,-220%) scale(1.4); }
+  }
+
+  @media (max-width:900px){
+    .home-grid{ grid-template-columns:1fr; }
+    .category-card{ width:100%; }
+    .sub-grid{ grid-template-columns:1fr; }
+    .article-list{ grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+
+<!-- Loading overlay -->
+<div id="loaderOverlay" aria-hidden="false">
+  <div class="loader-circle" aria-hidden="true"></div>
+  <div id="loaderPercent">Loading — 0%</div>
+</div>
+
+<!-- small enable-sound pill (hidden by default) -->
+<div id="soundPill" style="display:none;" title="Enable greeting">
+  <span id="soundIcon">🔊</span><span id="soundText">Enable sound</span>
+</div>
+
+<!-- Header -->
+ <header style="display:flex; align-items:center; justify-content:space-between; padding:10px 20px; gap:20px;">
+  <div id="logo" style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+    <img id="logoImg" src="" alt="Logo" style="height:50px; display:none; border-radius:6px; object-fit:contain;">
+    <span id="logoText" style="font-weight:700; font-size:1.2rem; color:#b37533;">Kamatuoran</span>
+    <input type="file" id="logoUpload" accept="image/*" style="display:none;">
+  </div>
+
+  <h1 onclick="openPage('home')" style="margin:0; cursor:pointer;">Kamatuoran</h1>
+
+  <nav style="display:flex; gap:10px;">
+    <button onclick="openPage('home')">HOME</button>
+    <button onclick="openPage('destinations')">CATEGORIES</button>
+    <button onclick="openPage('about')">ABOUT</button>
+    <button onclick="openPage('feedback')">FEEDBACK</button>
+  </nav>
+</header>
+
+<script>
+// Logo upload and persistence
+const logo = document.getElementById('logo'),
+      upload = document.getElementById('logoUpload'),
+      logoImg = document.getElementById('logoImg'),
+      logoText = document.getElementById('logoText');
+
+logo.addEventListener('click', () => upload.click());
+
+upload.addEventListener('change', () => {
+  const file = upload.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    logoImg.src = e.target.result;
+    logoImg.style.display = 'block';
+    logoText.style.display = 'none';
+    localStorage.setItem('siteLogo', e.target.result);
+  };
+  reader.readAsDataURL(file);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  const savedLogo = localStorage.getItem('siteLogo');
+  if (savedLogo) {
+    logoImg.src = savedLogo;
+    logoImg.style.display = 'block';
+    logoText.style.display = 'none';
+  }
+});
+</script>
+<center>
+<div class="kalinga-divider"></div>
+
+<!-- Pages (single-file) -->
+<div id="home" class="container page">
+  <div class="home-grid">
+    <div>
+      <section class="hero page-section">
+        <img id="home-hero-img" src="https://image2url.com/images/1764323502109-15b1dd44-e48b-4dbd-bd09-119669a8f3bf.jpg" alt="Hero (Philippine scene)">
+        <h2 id="home-hero-title" class="editable" contenteditable="true">Kamatuoran Website</h2>
+        <p id="home-hero-lead" class="editable" contenteditable="true", align="justice">
+         Ang Kamatuoran ay isang website na naglalayong ipakita ang tunay na Pilipinas. Hindi lamang namin itinatampok rito ang magaganda at nakakaakit nitong mga aspeto, kundi pati na rin ang mga kultura, tradisyon, pang-araw-araw na pamumuhay, at totoong kalagayan ng lipunan at politika. Sa pagbisita mo sa Kamatuoran, makikita mo ang mga larawan at kwento sa likod ng bawat isa, na maaaring magbigay sa atin ng mas malalim na pag-unawa sa ating bansa at sa mga bumubuo rito. Layunin rin ng website na ito na maghatid ng impormasyon na hindi lamang tapat kundi makabuluhan at napapanahon, upang mas maging kapaki-pakinabang sa mga mambabasa.
+        </p>
+      </section>
+
+    <aside class="sidebar">
+      <div class="editorial page-section">
+        <h4 style="margin:0 0 8px 0; color:var(--deep)"></h4>
+        <p contenteditable="true" class="editable">Maligayang Pagdating sa Kamatuoran kung saan inimungkahi ang mga realidad ng Pilipinas.</p>
+      </div>
+
+      <div class="page-section">
+        <h4 style="color:var(--accent); margin:0 0 8px 0;">Quick Picks</h4>
+        <ul style="padding-left:18px;">
+          <li contenteditable="true" class="editable">Politiko</li>
+          <li contenteditable="true" class="editable">Kultura</li>
+          <li contenteditable="true" class="editable">Komunidad</li>
+        </ul>
+      </div>
+
+     <div class="page-section" style="margin-top:12px;"> 
+  <h4 style="color:var(--accent)">Search</h4>
+  <input id="searchInput" placeholder="Search destinations or articles..." 
+         style="width:100%; padding:8px; border-radius:8px; border:2px solid #eee;" 
+         oninput="filterItems()"/>
+  <button style="margin-top:8px; padding:8px 12px; border:none; background:var(--deep); color:white; border-radius:8px; cursor:pointer;"
+          onclick="filterItems()">Hanap</button>
+
+  <ul id="searchResults" style="margin-top:10px; list-style:none; padding:0;"></ul>
+</div>
+
+<script>
+// Example data: destinations or articles
+const items = [
+];
+
+function filterItems() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const results = items.filter(item => item.toLowerCase().includes(query));
+  const resultsContainer = document.getElementById('searchResults');
+  resultsContainer.innerHTML = results.length 
+    ? results.map(item => `<li style="padding:6px 0; border-bottom:1px solid #eee;">${item}</li>`).join('')
+    : '<li style="padding:6px 0;">No results found</li>';
+}
+
+// Initialize empty results
+filterItems();
+</script>
+
+    </aside>
+  </div>
+
+  <!-- quick categories row -->
+<!-- Destinations (category grid) -->
+
+   
+    
+  </div>
+</div>
+<div id="destinations" class="container page" style="display:none;">
+  <div class="page-section">
+    <button class="back-btn" onclick="goBack()">← Balik</button>
+    <h2 style="color:var(--accent);">Main Categories</h2>
+    <div class="sub-grid" style="margin-top:12px;">
+      <div class="sub-box" onclick="openPage('politicsMain')" data-sub="politics"><img src="https://philnews.ph/wp-content/uploads/2019/03/Philippine-Government-Agencies.jpg"><h3>Neolibrala na Atake sa Pamantayan</h3>
+
+        <div class="emoji-widget" data-target="politics">
+          <span class="emoji-btn" data-emoji="📜" title="History" onclick="emojiClick(event, 'politics', '📜')">📜</span>
+          <span class="emoji-count" data-key="politics_📜">0</span>
+        </div>
+      </div>
+      <div class="sub-box" onclick="openPage('cultureMain')" data-sub="culture"><img src="https://tse1.mm.bing.net/th/id/OIP.01cnUcSh1qHmLmUIZKwGPAHaFj?w=1080&h=810&rs=1&pid=ImgDetMain&o=7&rm=3"><h3>Culture</h3>
+        <div class="emoji-widget" data-target="culture">
+          <span class="emoji-btn" data-emoji="🪕" title="Music" onclick="emojiClick(event, 'culture', '🪕')">🪕</span>
+          <span class="emoji-count" data-key="culture_🪕">0</span>
+        </div>
+      </div>
+      <div class="sub-box" onclick="openPage('societyMain')" data-sub="society"><img src="https://i.pinimg.com/474x/5c/78/70/5c78706998b29598d3c9086fef3d4a04.jpg?nii=t"><h3>Society</h3>
+        <div class="emoji-widget" data-target="society">
+          <span class="emoji-btn" data-emoji="🤝" title="Bayanihan" onclick="emojiClick(event, 'society', '🤝')">🤝</span>
+          <span class="emoji-count" data-key="society_🤝">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</center>
+
+<!-- About, Feedback pages -->
+<!-- ABOUT PAGE -->
+<div id="about" class="container page" style="display:none;">
+  <div class="page-section">
+    <button class="back-btn" onclick="goBack()">← Balik</button>
+
+    <!-- TOP LOGO IMAGE -->
+    <div style="width:100%; text-align:center; margin-bottom:20px; margin-top:10px;">
+      <img id="aboutLogo"
+           src="https://via.placeholder.com/150?text=Logo"
+           style="width:150px; height:150px; border-radius:12px; object-fit:cover; cursor:pointer;">
+      <input type="file" id="aboutLogoInput" accept="image/*" style="display:none;">
+    </div>
+
+    <!-- LOGO DESCRIPTION -->
+    <h3 style="color:var(--accent)">Logo</h3>
+    <p id="logoText" contenteditable="true" class="editable" oninput="saveAbout()" style="text-align: justify; text-indent: 30px;>
+      Ang kamatuoran ay isang salitang Cebuano na nangangahulugang ‘truth’ o ‘katotohanan.’
+      Napili namin ito bilang pangalan dahil ito ang pangunahing layunin ng aming website…
+      ang itampok at ipalaganap ang totoong Pilipinas. Ang larawan ng pamilyang
+      nagsasalo-salo sa ibaba ay sumisimbolo sa diwa ng bayanihan at likas na pagkakaisa
+      ng mga Pilipino. Ang batang nagmamano naman ay sumasagisag sa ating mataas na
+      pagpapahalaga sa tradisyon at kultura. Ang isang araw at tatlong bituin naman
+      ay sagisag ng ating pag-asa.
+    </p>
+
+    <!-- MISSION & VISION -->
+    <div style="margin-top:24px;>
+      <h3 style="color:var(--accent)">Mission</h3>
+      <p id="missionText" contenteditable="true" class="editable" oninput="saveAbout() style="text-align: justify; text-indent: 30px;>
+        Upang aktibong mangalap, mag-curate, at magpakita ng tunay at mapapatunayang
+        nilalaman tungkol sa kultura, lipunan, at pulitika ng Pilipinas. Kami ay nakatuon
+        sa pagbibigay ng tumpak na impormasyon at paghubog ng aktibong mamamayan sa
+        pamamagitan ng madaling ma-access na kaalaman at diskurso.
+      </p>
+
+      <h3 style="color:var(--accent); margin-top:12px;">Vision</h3>
+      <p id="visionText" contenteditable="true" class="editable" oninput="saveAbout() style="text-align: justify; text-indent: 30px;>
+        Maging tapat at makabuluhang plataporma na naglalarawan ng totoong Pilipinas,
+        upang makatulong sa mas malalim na pag-unawa ng bawat tao sa ating kultura,
+        lipunan, at politika.
+      </p>
+    </div>
+
+    <!-- MEMBERS -->
+    <h3 style="color:var(--accent); margin-top:24px;">Meyembro ng Grupo</h3>
+    <div id="memberGrid" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;"></div>
+  </div>
+</div>
+
+<script>
+const totalMembers = 7;
+
+/* SAVE ALL DATA */
+function saveAbout() {
+  const data = {
+    logoImage: document.getElementById("aboutLogo")?.src || "",
+    logoText: document.getElementById("logoText")?.innerHTML || "",
+    mission: document.getElementById("missionText")?.innerHTML || "",
+    vision: document.getElementById("visionText")?.innerHTML || "",
+    members: []
+  };
+
+  for (let i = 1; i <= totalMembers; i++) {
+    const img = document.getElementById("memberImg" + i);
+    const name = document.getElementById("memberName" + i);
+
+    data.members.push({
+      img: img?.src || "",
+      name: name?.innerHTML || ""
+    });
+  }
+
+  localStorage.setItem("aboutData", JSON.stringify(data));
+}
+
+/* LOAD ALL DATA */
+function loadAbout() {
+  const stored = localStorage.getItem("aboutData");
+  const data = stored ? JSON.parse(stored) : {};
+
+  // Load text content
+  if (data.logoText) document.getElementById("logoText").innerHTML = data.logoText;
+  if (data.mission) document.getElementById("missionText").innerHTML = data.mission;
+  if (data.vision) document.getElementById("visionText").innerHTML = data.vision;
+  if (data.logoImage) document.getElementById("aboutLogo").src = data.logoImage;
+
+  // Load members
+  const grid = document.getElementById("memberGrid");
+  grid.innerHTML = "";
+
+  for (let i = 1; i <= totalMembers; i++) {
+    const member = data.members?.[i - 1] || {
+      img: `https://via.placeholder.com/100?text=Member+${i}`,
+      name: `Member ${i}`
+    };
+
+    const div = document.createElement("div");
+    div.style.textAlign = "center";
+    div.style.width = "150px";
+    div.style.display = "flex";
+    div.style.flexDirection = "column";
+    div.style.alignItems = "center";
+
+    div.innerHTML = `
+      <img id="memberImg${i}"
+           src="${member.img}"
+           style="width:100px;height:100px;border-radius:50%;cursor:pointer;object-fit:cover;">
+
+      <input type="file" id="memberInput${i}" accept="image/*" style="display:none;">
+
+      <p id="memberName${i}"
+         contenteditable="true"
+         class="editable"
+         style="margin-top:8px;font-weight:500;text-align:center;">
+         ${member.name}
+      </p>
+    `;
+
+    grid.appendChild(div);
+
+    // Upload image
+    const imgEl = div.querySelector(`#memberImg${i}`);
+    const fileInput = div.querySelector(`#memberInput${i}`);
+    const nameEl = div.querySelector(`#memberName${i}`);
+
+    imgEl.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        imgEl.src = e.target.result;
+        saveAbout();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    nameEl.addEventListener("input", saveAbout);
+  }
+
+  /* LOGO UPLOAD */
+  const aboutLogo = document.getElementById("aboutLogo");
+  const aboutLogoInput = document.getElementById("aboutLogoInput");
+
+  aboutLogo.addEventListener("click", () => aboutLogoInput.click());
+
+  aboutLogoInput.addEventListener("change", function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      aboutLogo.src = e.target.result;
+      saveAbout();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", loadAbout);
+</script>
+
+
+<div id="feedback" class="container page" style="display:none;">
+  <div class="page-section">
+    <button class="back-btn" onclick="goBack()">← Balik</button>
+    <h2 style="color:var(--accent)">Mag-iwan ng Mensahe</h2>
+    <p contenteditable="true">Have a suggestion? Leave a note.</p>
+    <textarea id="fbArea" rows="4" style="width:100%; padding:10px; border-radius:8px; border:2px solid #eee;"></textarea>
+    <div style="margin-top:8px;">
+      <button onclick="submitFeedback()" class="add-img-btn">Submit</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- Main Category Pages -->
+<div id="politicsMain" class="container page" style="display:none;">
+  <div class="page-section">
+    <h2 style="color:var(--accent)"><center>SA GITNA NG KATAHIMIKAN, SUMISIGAW ANG BOSES NG KABATAAN</center></h2>
+        <h5><center>Awtor: Zahra Michiko B. Corona & Harold L. Dandin</center></h5>
+        <center><img src="https://image2url.com/images/1764328309955-41d835ce-942e-434f-8572-4d1de7b04fcc.png" width="500" height="300"></center>
+        <p style="text-align: justify; text-indent: 30px;">
+          Sa unang tingin, simpleng eksena lamang ang larawang ito—isang lumang istruktura, isang poste, at ilang poster na nakadikit. Ngunit kung ito ay titignan sa mas malalim na paraan, ay makikita ang masakit na katotohanan sa politika ng Pilipinas na patuloy gumuguhit sa buhay ng mga mamamayan, lalo na sa mga kabataan. Ito ang nagsisilbing boses ng mga kabataan na may paninindigan. Ang bawat poster na nakasabit at nakadikit sa poste ay nagiging simbolo ng pagtutol, galit, at pag-asa ng mga mamamayan.</p>
+       <p style="text-align: justify; text-indent: 30px;">
+        Ang mga panawagan sa larawan ay sumasalamin sa tunay na kalagayan ng bansa. Hindi ito gawa-gawang reklamo, ito ay reaksyon sa mga polisiya, pamumuno, at istrukturang patuloy na bumabalot sa edukasyon at lipunan. Ang mga lumang papel, napunit at napalitan, na sinisimbolo ang paulit-ulit na panawagan ngunit wala paring nagbabago. Tahimik ang lugar, ngunit sumisigaw ang larawan na dapat nating ipaglaban ang ating mga karapatan. Sa katahimikang ito, mas naririnig ang hinaing ng kabataan, at iyon ay ang pagnanais para sa isang makatarungan at malayang pamantasan. 
+        Ito ay larawan ng tunay na sitwasyon ng Pilipinas, kahit mahirap ang sistema, may mga taong hindi tumitigil na manindigan. Ipinapakita nito na may mga estudyanteng handang magpahayag, makialam, at maging kritikal sa mga nangyayari sa kanilang paligid. At sa bawat pader, bawat poste, at bawat panawagan, ay maririnig ang boses ng bawat mamamayan at ito ay hindi kailanman mawawala hangga’t nay handang magsalita at manindigan para sa katotohanan.</p>
+
+      <center><h3 style="color:var(--accent)"><b>Facing the Harsh Realities of the Philippine Government!</b>
+        </h3></center><center><img src="https://image2url.com/images/1764328838838-a575d935-84c1-4a39-9174-d8e09571bc53.webp" width="500" height="300">
+        </p>
+        <p style="text-align: justify; text-indent: 30px;">
+    Sa pamumuhay sa Pilipinas, imposibleng balewalain ang matitinding katotohanan sa loob ng ating pamahalaan. Patuloy na kinakaharap ng mga institusyon ang katiwalian, na nagpapabagal sa pag-unlad at sumisira sa mga pampublikong yaman. Maraming politiko ang inuuna ang pansariling kapakinabangan kaysa kapakanan ng mga mamamayang kanilang pinaglilingkuran. Ang mabagal at magulo na burukrasya ay nagpapahirap sa mga mamamayan na ma-access ang mahahalagang serbisyo tulad ng kalusugan, edukasyon, at social support. Malawak pa rin ang kahirapan, at madalas na hindi naaabot ng mga programang pamahalaan ang mga komunidad na higit na nangangailangan.</p>
+
+    <p style="text-align: justify; text-indent: 30px;">
+    Namamayani ang mga political dynasty sa mga posisyon ng pamumuno, na naglilimita sa pagkakataon ng mga bagong ideya at tunay na representasyon. Ang paboritismo at patronage politics ay lumilikha ng kapaligiran kung saan mas pinahahalagahan ang katapatan kaysa kakayahan. Mababa ang tiwala ng publiko sa pamahalaan dahil bihira namang natutupad ang mga pangako ng reporma. May mga batas at polisiya, ngunit hindi pare-pareho ang pagpapatupad, kaya nagiging bulnerable ang ordinaryong tao.</p>
+
+    <p style="text-align: justify; text-indent: 30px;">
+    Maraming mamamayan ang nadidismaya, iniisip na imposible ang pagbabago. Ngunit, sa kabila ng mga hamong ito, nananatili ang pag-asa sa katatagan ng mga Pilipino. Ipinapakita ng pakikilahok sa civic engagement, mga protesta, at adbokasiya na hindi mananahimik ang mamamayan. Mahalaga ang transparency at accountability, ngunit nangangailangan ito ng aktibong partisipasyon mula sa mga lider at publiko.</p>
+
+    <p style="text-align: justify; text-indent: 30px;">
+    Ang etikal na pamumuno ay hindi lamang pangangailangan—ito ay responsibilidad na hindi dapat ipagsawalang-bahala. May papel ang media at social platforms sa pagbubunyag ng kamalian at paghingi ng reporma. Mahalaga ang edukasyon upang mapalakas ang kakayahan ng mamamayan na maunawaan ang kanilang karapatan at panagutin ang mga lider. Bawat boto ay may bigat, at ang kaalaman ay makapangyarihang kasangkapan para sa pagbabago.</p>
+
+    <p style="text-align: justify; text-indent: 30px;">
+    Maaaring nakakalungkot ang matinding katotohanan, ngunit ito rin ay panawagan para sa aksyon. Ang pagtatayo ng mas maayos na pamahalaan ay hindi madali, ngunit posible sa pamamagitan ng sama-samang pagsisikap at pagbabantay. Sa huli, ang kinabukasan ng Pilipinas ay nakasalalay hindi lamang sa mga lider nito kundi sa bawat mamamayang handang humiling ng katapatan, katarungan, at patas na pamamahala.</p>
+</p>
+    </div>
+  </div>
+</div>
+
+  </div>
+
+
+<div id="cultureMain" class="container page" style="display:none;">
+  <div class="page-section">
+    <h2 style="color:var(--accent)"><center>Ang Bumubuo sa Pagkatao ng mga Pilipino</center></h2>
+        <h5><center>Awtor: Denize B. Variacion</center></h>
+        <p style="text-align: justify; text-indent: 30px;">
+        Ang kultura ay isang bagay na dapat ipinagmamalaki ng bawat bansa. Ito ang bumubuo sa ating pagkatao at nagiging depinisyon ng ating pagkakaiba sa ibang bansa. Ngunit sa patuloy na pag-unlad ng ekonomiya, naisasabuhay pa rin ba ang kultura ng mga Pilipino?</p>
+         <center><h3><b>Mga Likha ng Kamay at Tradisyong Pilipino</b></h3></center>
+    <center><img src="https://image2url.com/images/1764329335605-e146f4eb-bcfa-4be2-98fa-376ade7f82c3.png" width="500" height="300"></center>
+   <p style="text-align: justify; text-indent: 30px;">
+    Isa sa nagpapakulay ng ating kultura ay ang pagpapakita ng talento sa pamamagitan ng sining. Ang barong ay isang halimbawa nito—isang pormal na kasuotang sumisimbolo sa dangal, pormalidad, at pagkakakilanlan ng ating bansa. Dagdag pa rito ang mga basket, pamaypay, at sumbrerong gawa sa abaca at iba pang likas na yaman na nagpapakita ng husay at tiyaga ng mga lokal na manggagawa.</p>
+
+     <p style="text-align: justify; text-indent: 30px;">
+     Ngunit sa kasalukuyan, patuloy pa rin bang ginagamit ang mga ito? Ang patuloy na paggamit ng plastic at paper bags ay nakakaapekto sa ating ekonomiya at kalikasan. Ngunit kung magpapatuloy ang paggamit at pagtangkilik sa mga produktong gawa sa abaca, hindi ba’t mas makakatulong ito sa ating ekonomiya? Sa patuloy na pagsuporta sa gawang lokal, tayo ay nakababawas sa mga suliraning kinakaharap ng bawat Pilipino at higit na naipagyayabong ang mga produktong nagpapakita ng ating kahusayan, pagkamalikhain, at higit sa lahat, ang ating kultura.</p>
+
+    <center><h3><b>Sorbetes at Jeepney: Isang Mukha ng Kulturang Pilipino</b></h3></center>
+    <center><img src="https://image2url.com/images/1764329928935-6555a8b1-44c6-4417-9e06-7cd87948aa18.png" width="500" height="300"><img src="https://image2url.com/images/1764330009815-ab0706f0-53ce-4ff1-b766-4304c80d3001.png" width="500" height="300"></center>
+    <p style="text-align: justify; text-indent: 30px;"><b>
+      Sa bawat kanto ng Pilipinas, may dalawang bagay na hindi mawawala: ang makulay na kariton ng sorbetero at ang mabilis na andar ng jeepney. Kung iisipin, maaaring magkaiba ang kanilang mundo—ang isa ay nagbibigay ng matamis na sorbetes, habang ang isa ay naghahatid ng iba’t ibang pasahero sa kanilang destinasyon. Ngunit sa ilalim ng haring araw, sa gitna ng alikabok at maingay na kalsada, ang kanilang kuwento ay nagtatagpo. Ang dalawang ito ay sumisimbolo sa reyalidad na hinaharap ng mga Pilipino at parehong nagpapakita ng katangian ng ating kultura.</b>
+
+    <p style="text-align: justify; text-indent: 30px;"><b>
+    Sa larawan ng sorbetero, makikita ang isang lalaking bahid ng pagod ngunit patuloy na matiyaga sa kanyang trabaho. Hindi lamang sila nagbibigay ng kasiyahan sa mga kabataan—sila rin ay sumisimbolo ng pag-asa. Pag-asang sa patuloy na pagtulak ng kariton ay maaabot nila ang kanilang pangarap. Maliit man ang kabuhayan, malaki naman ang ambag nito sa kulturang Pilipino: ang sipag, tiyaga, at kasiyahang nakukuha kahit sa simpleng bagay.</b></p>
+
+     <p style="text-align: justify; text-indent: 30px;"><b>
+     Sa kabilang banda, ang jeepney ay nananatiling higanteng simbolo ng paglalakbay ng sambayanang Pilipino. Ito ang “hari ng kalsada,” may matitingkad na kulay na nagkukuwento ng ating kultura. Araw-araw itong lumalaban—humaharurot sa trapiko, nagbibigay-silong sa mga pasahero mula sa ulan at init, at patuloy na nagsisilbing ugat ng pampublikong transportasyon. Kasabay nito, dala rin nito ang reyalidad ng pasaherong laging nagmamadali, drayber na kailangang kumita, at sistemang hindi laging patas. Sa kabila nito, nananatiling matatag ang jeepney, tulad ng kulturang Pilipino na hindi agad sumusuko.</b></p>
+
+     <p style="text-align: justify; text-indent: 30px;"><b>
+     Sa kabuuan, ang sorbetes at jeepney ay parehong produkto ng malikhaing pag-iisip at lakas ng Pilipino. Sila ang patunay na sa gitna ng mabilis na pagdaloy ng ekonomiya at sa patuloy na pag-unlad ng Pilipinas tungo sa modernisasyon, nananatili ang ating kultura. Buhay ito sa kalsada—sa bawat takbo ng gulong at bawat tulak ng kariton, naroon ang tibok ng isang bansang patuloy na lumalaban, naglalakbay, at ngumingiti.</b></p>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="societyMain" class="container page" style="display:none;">
+  <div class="page-section">
+     <h2 style="color:var(--accent)"><center>Katotohanan sa Likod ng Lipunan sa Pilipinas</center></h2>
+        <h5><center>Awtor: Antoneth P. Feliciano & Johanna Desiree Espinosa</center></h5>
+        <p style="text-align:center;text-indent: justify-content;"><b>Ang lipunan ay isang organisadong komunidad kung saan ang mga tao ay magkakasamang naninirahan na may iisang batas, kultura, paniniwala, at sistemang sinusunod. Ito ay binubuo ng mga organisasyon tulad ng pamilya, paaralan, pamahalaan, simbahan, at ekonomiya, na sama samang tumutulong sa paghubog ng pag-uugali at pananaw ng bawat indibidwal.
+        Sa Pilipinas, naipapakita ang ating lipunan sa pamamagitan ng ating pakikipag-ugnayan sa ating kapwa mamamayan, mula sa pakikipagkapwa-tao, pagkakaisa, at pag respeto sa bawat isa, hanggang sa mga institusyon sa paaralan, simbahan, at pamahalaan. Makikita ito saating pang-araw araw na gawi, tulad ng kung papaano tayo magtulungan sa bawat isa kahit hindi magkakilala, pagmamano at pagsasabi ng “po” at “opo sa mga nakakatanda, at paglalaan ng oras para sa mga nangangailangan. Mula sa simpleng bayanihan hanggang sa sama-samang pagdiriwang ng mga pista at tradisyon, makikita na ang ating lipunan ay buhay, makulay, at nakabatay sa kultura ng pagtutulungan. Gayunpaman, bahagi rin ng ating lipunan ang mga hamon tulad ng kahirapan, trapiko, korapsyon, at suliraning panlipunan, na nagpapakita na patuloy na naghahanap ng pagbabago at pag-unlad ang ating bansa.</b></p>
+        <center>
+
+        <h3><b>SIMPLENG BATAS, HINDI PA MATUPAD!</b></h3></center>
+
+        <center><img src="https://image2url.com/images/1764324231430-39a64f37-0984-4a18-bd56-925df1f74a6a.png" width="500" height="300"><img src="https://image2url.com/images/1764328588904-d206d626-3103-4e78-9f5b-820cea6fd9aa.jpg" width="500" height="300"></center></p>
+        <p style="text-align:center;text-indent: justify-content ;"><b>Ang larawang ito ay isang repleksiyon ng malungkot na realidad ng ating araw-araw na buhay. Habang ako ay nasa loob ng jeep pauwi, naisipan kong kumuha ng litrato ng mga lugar na aking madadaanan para sa aming gawain, at dito ko nakita ang mga nakatambak na basura sa mismong lugar kung saan malinaw na nakapaskil ang karatulang “BAWAL MAGTAPON NG BASURA DITO.” Mabilis kong kinuhanan ito dahil batid kong hindi na bago sa akin ang ganitong tanawin — basurang nakakalat sa mga gilid ng kalsada, umaagos sa ilog, at nag-iipon sa sulok ng mga eskinita, naghihintay lamang na mapulot ng mga nangongolekta ng basura. Bilang isang mamamayang Pilipino na nagnanais na makita ang kaayusan sa komunidad, nakalulungkot isipin at makita ang tanawing may malinaw at maliwanag na paalala, ngunit tila walang pakialam ang ilan. Ang paalalang naroon na sana’y magsilbing babala, ay tila naging dekorasyon nalang.
+        Ayon sa datos ng Waste Management ng Pilipinas, may humigit-kumulang 61,000 metriko toneladang basura ang nakokolekta araw-araw— at malaking porsyento nito ang mga basura na nasa ating mga dagat, ilog, kanal, at lansangan, lalo na sa Metro Manila. Ipinapakita nitong hindi lamang problema ng gobyerno ang kawalan ng disiplina, kundi pati na rin ng mga mamamayang patuloy na walang konsiderasyon sa kapaligiran. Ang pagtatapon ng basura sa bawal na lugar ay may kasunod na panganib— nagdudulot ng pagbaha, polusyon, paglala ng mga sakit, at pagkasira ng kalikasan. Hindi ba’t napakasimple lang sundin? Isang paalala, isang patakaran, ngunit bakit tila napakahirap intindihin? Kung tunay nating nais ang kaayusan, kailangan nating kilalanin na parte tayo ng solusyon, hindi dahilan ng problema. Kaya marapat lamang na magtulungan tayong lahat at hindi magsisihan, sapagkat ang kalinisan ng ating paligid ay repleksyon ng ating pagkatao at pagmamahal sa lipunang kinabibilangan.
+        Sa kabuuan, ang larawang ito ay hindi lamang isang litrato ng kanto— isa itong babala, paalala, at hamon para sa mga Pilipino. Ang tambak na basurang nakalatag sa lugar na mariing ipinagbabawal ay malinaw na simbolo ng kakulangan sa disiplina at malasakit. Kung araw-araw ay umaabot sa libo-libong metrikong tonelada ang basura sa ating bansa, maaari itong mabawasan kung bawat isa ay marunong sumunod sa payak na batas. Kaya’t sa halip na magsisihan, mag-akusa, o magpawalang-bahala, piliin nating magkaisa. Dahil ang kalinisan ay hindi lamang tungkulin ng iilan— tungkulin ito ng bawat mamamayan.</b></p>
+        <h3><center><b>BARYA PARA SA ATIN, BUHAY PARA SA KANILA</b></center></h3>
+        <center><img src="https://image2url.com/images/1764327316244-15bfb1eb-fb95-4699-8575-dd401f793bb0.png", width="500" height="300"><img src="https://image2url.com/images/1764327455633-eb6bf6e5-3255-4d9c-b6e4-086eb3a9b6a3.png", width="500" height="300"></center>
+
+        <p style="text-align:center; text-indent: justify-content;"><b>Simpleng larawan na halos araw-araw na rin natin nakikita: mga matatanda at  bata  na lumalapit upang manghingi ng limos, tanawin na normal at ordinaryo na lamang sa ating paningin. Ngunit, sa likod ng ordinaryong eksena na ito ay makikita ang malungkot at matagal ng realidad ng ating lipunan — ang patuloy na paglaganap ng kahirapan sa ating bansa at ang kakulangan sa sapat na tulong at oportunidad para sa mga taong tunay na nangangailangan. Ang mga matatanda na sana ay nagpapahinga na ay napipilitan pa rin na patuloy mag hanap buhay kahit na humihina na ang kanilang mga katawan dahil sa sistema ng ating lipunan — wala silang iba pang magawa kung hindi ang manlimos para lang masustentuhan ang kanilang mga pang araw-araw na pangangailangan.
+
+          Sa gitna ng maingay at mataong kalsada, malinaw na makikita ang dalawang klase ng tao sa ating lipunan: ang mga nasa laylayan at ang mga may kaya. Para sa iba, ang pag-aabot ng barya sa mga nanlilimos ay simpleng kabutihan lamang, ngunit para sa kanila, ito ay malaking tulong na. Sa maliit na halagang iyon, maaari na nilang mabili ang kanilang pangunahing pangangailangan. Sa ganitong sitwasyon rin masasalamin ang kakulangan ng benepisyo at suporta para sa mga mahihirap. Tila paulit-ulit at patuloy na lumalala ang isyung ito sa ating lipunan at napapaisip na lamang ako: “Bakit hindi pagtuunan ng pansin ang mga tunay na nangangailangan? Bakit mas nabibigyan ng pagkakataon at tulong ang mga may kaya kaysa sa mga mahihirap?” Sila ang nagsisilbing paalala ng mga kabiguang kinakaharap ng ating bansa at kung gaano pa kalaki ang kailangang baguhin sa sistemang matagal ng hindi patas para sa lahat.
+
+          Ito ay hindi lamang patungkol sa araw araw natin nakikita sa ating paligid, inilalarawan din nito ang isa sa matagal at seryosong problema ng ating lipunan. Nararapat na kumilos ang ating gobyerno upang mabigyan ng tulong ang mga mahihirap sapagkat hindi sapat ang mga barya na baguhin ang kanilang kabuuang kalagayan ng kahirapan. Ang mga larawan ay nagsisilbing paalala na wag natin panatilihing normal ang ganitong sitwasyon, oras na upang maging boses ng mga mahihirap — sila naman ang pagtuunan natin ng pansin at bigyan ng tulong. Matuto tayong magkaroon ng malasakit sa ating kapwa upang tayo ay makaahon sa matagal na pagkalugmok sa kahirapan.</b></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer Section -->
+<footer style="background-color:#2c3e50; color:white; padding:40px 20px; text-align:center;">
+  <div style="max-width:1200px; margin:0 auto; display:flex; flex-wrap:wrap; justify-content:space-around; align-items:flex-start; gap:20px;">
+    
+    <!-- Contact Details -->
+    <div style="flex:1; min-width:200px;">
+      <h3>Contact Us</h3>
+      <p>Email: info@Kamatuoranwebsite.com</p>
+      <p>Phone: +63 912 345 6789</p>
+      <p>Address: 123 Main St, Manila, Philippines</p>
+    </div>
+
+    <!-- Social Media Links -->
+    <div style="flex:1; min-width:200px;">
+      <h3>Follow Us</h3>
+      <p>
+        <a href="https://facebook.com/youraccount" target="_blank" style="color:white; text-decoration:none; margin-right:10px;">Facebook</a> |
+        <a href="https://instagram.com/youraccount" target="_blank" style="color:white; text-decoration:none; margin:0 10px;">Instagram</a> |
+        <a href="https://twitter.com/youraccount" target="_blank" style="color:white; text-decoration:none; margin-left:10px;">Twitter</a>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Footer Bottom -->
+  <div style="margin-top:30px; font-size:14px; color:#bdc3c7;">
+    &copy; 2025 KamatuoranWebsite. All rights reserved.
+  </div>
+</footer>
+
+<!-- Full Editable Pages -->
+<div id="politicsPage" class="container page" style="display:none;">
+  <div class="page-section">
+    <button class="back-btn" onclick="goBack('politicsMain')">← Back</button>
+    <h2 contenteditable="true" class="editable" id="politicsTitle" oninput="savePage('politicsPage')">Politiko</h2>
+    <p contenteditable="true" class="editable" id="politicsText" oninput="savePage('politicsPage')">Write about politics here.</p>
+    <div id="politicsSlider" class="slider"></div>
+    <input type="file" accept="image/*" style="display:none;" id="politicsUpload" onchange="handleUpload(event,'politicsPage')">
+    <button class="add-img-btn" onclick="document.getElementById('politicsUpload').click()">Maglagay ng Litrato</button>
+  </div>
+</div>
+
+<div id="culturePage" class="container page" style="display:none;">
+  <div class="page-section">
+    <button class="back-btn" onclick="goBack('cultureMain')">← Back</button>
+    <h2 contenteditable="true" class="editable" id="cultureTitle" oninput="savePage('culturePage')">Kultura</h2>
+    <p contenteditable="true" class="editable" id="cultureText" oninput="savePage('culturePage')">Write about culture here.</p>
+    <div id="cultureSlider" class="slider"></div>
+    <input type="file" accept="image/*" style="display:none;" id="cultureUpload" onchange="handleUpload(event,'culturePage')">
+    <button class="add-img-btn" onclick="document.getElementById('cultureUpload').click()">Maglagay ng Litrato</button>
+  </div>
+</div>
+
+<div id="societyPage" class="container page" style="display:none;">
+  <div class="page-section">
+    <button class="back-btn" onclick="goBack('societyMain')">← Back</button>
+    <h2 contenteditable="true" class="editable" id="societyTitle" oninput="savePage('societyPage')">Komunidad</h2>
+    <p contenteditable="true" class="editable" id="societyText" oninput="savePage('societyPage')">Write about society here.</p>
+    <div id="societySlider" class="slider"></div>
+    <input type="file" accept="image/*" style="display:none;" id="societyUpload" onchange="handleUpload(event,'societyPage')">
+    <button class="add-img-btn" onclick="document.getElementById('societyUpload').click()">Maglagay </button>
+  </div>
+</div>
+
+<script>
+// Open/Back functions
+function openPage(pageId){
+    document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+    document.getElementById(pageId).style.display='block';
+    loadPage(pageId); // Ensure content is loaded when opening
+}
+function goBack(mainId){
+    document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+    document.getElementById(mainId).style.display='block';
+}
+
+// Image upload handler
+function handleUpload(event, pageId){
+    const file = event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e){
+        const imgSrc = e.target.result;
+        const slider = document.getElementById(pageId+'Slider');
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.style.display = 'block';
+        img.style.margin = '10px auto';
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+        slider.appendChild(img);
+        savePage(pageId);
+    }
+    reader.readAsDataURL(file);
+}
+
+// Save page content (text + images)
+function savePage(pageId){
+    const titleElem = document.getElementById(pageId+'Title');
+    const textElem = document.getElementById(pageId+'Text');
+    const slider = document.getElementById(pageId+'Slider');
+
+    if(!titleElem || !textElem || !slider) return;
+
+    const title = titleElem.innerHTML;
+    const text = textElem.innerHTML;
+    const images = Array.from(slider.querySelectorAll('img')).map(img => img.src);
+
+    localStorage.setItem(pageId, JSON.stringify({ title, text, images }));
+}
+
+// Load page content
+function loadPage(pageId){
+    const saved = localStorage.getItem(pageId);
+    if(!saved) return;
+    const data = JSON.parse(saved);
+
+    const titleElem = document.getElementById(pageId+'Title');
+    const textElem = document.getElementById(pageId+'Text');
+    const slider = document.getElementById(pageId+'Slider');
+
+    if(titleElem && data.title) titleElem.innerHTML = data.title;
+    if(textElem && data.text) textElem.innerHTML = data.text;
+
+    if(slider){
+        slider.innerHTML = '';
+        if(data.images && Array.isArray(data.images)){
+            data.images.forEach(src=>{
+                const img = document.createElement('img');
+                img.src = src;
+                img.style.display = 'block';
+                img.style.margin = '10px auto';
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.objectFit = 'contain';
+                slider.appendChild(img);
+            });
+        }
+    }
+}
+
+// Load all pages on startup
+window.addEventListener('DOMContentLoaded', ()=>{
+    ['politicsPage','culturePage','societyPage'].forEach(loadPage);
+});
+</script>
+
+
+<script>
+  // Simple page manager + smart history
+  const pages = document.querySelectorAll('.page');
+  let historyStack = ['home']; // start with home visible
+
+  function showOnly(id){
+    pages.forEach(p => p.style.display = 'none');
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'block';
+    window.scrollTo(0,0);
+  }
+
+  function openPage(id){
+    showOnly(id);
+    historyStack.push(id);
+  }
+
+  function goBack(){
+    if(historyStack.length > 1){
+      historyStack.pop(); // remove current
+      const prev = historyStack.pop() || 'home';
+      openPage(prev);
+    } else {
+      openPage('home');
+    }
+  }
+
+  // add image to a slider/gallery DOM by prompt
+  function addImage(galleryId){
+    const url = prompt('Paste image URL (eg. https://...jpg):');
+    if(!url) return;
+    const g = document.getElementById(galleryId);
+    if(!g) return alert('Gallery not found: '+galleryId);
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.width = '320px';
+    img.style.height = '200px';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = '8px';
+    img.style.marginRight = '8px';
+    g.appendChild(img);
+  }
+
+  function submitFeedback(){
+    const text = document.getElementById('fbArea').value;
+    if(!text.trim()) return alert('Please write something.');
+    alert('Thank you! Your message has been received.');
+    document.getElementById('fbArea').value = '';
+    openPage('home');
+  }
+
+  // initialize visible page
+  showOnly('home');
+
+  /*** Loading overlay logic ***/
+  const loader = document.getElementById('loaderOverlay');
+  const loaderPercent = document.getElementById('loaderPercent');
+  let pct = 0;
+  const minShow = 600; // minimal ms for loader
+  const start = Date.now();
+
+  // simulate progressive loading (feel free to change)
+  const interval = setInterval(() => {
+    pct += Math.floor(Math.random() * 12) + 4; // jump
+    if(pct > 97) pct = 97;
+    loaderPercent.textContent = `Loading — ${pct}%`;
+  }, 90);
+
+  // finish loader once window loads (or fallback after 2s)
+  window.addEventListener('load', finishLoader);
+  setTimeout(finishLoader, 2400);
+
+  function finishLoader(){
+    if(loader.dataset.done) return;
+    loader.dataset.done = '1';
+    clearInterval(interval);
+    loaderPercent.textContent = 'Finalizing — 100%';
+    const elapsed = Date.now() - start;
+    const wait = Math.max(0, minShow - elapsed);
+    setTimeout(() => {
+      loader.style.opacity = '0';
+      loader.style.pointerEvents = 'none';
+      loader.setAttribute('aria-hidden','true');
+      setTimeout(()=> loader.remove(), 400);
+      // After loader removed, try to auto-play greeting
+      attemptGreetingAutoplay();
+    }, wait + 300);
+  }
+
+  /***** Emoji interaction system *****/
+  // Helper: key for localStorage
+  function getKey(cat, emoji){ return `pamana_emoji_${cat}_${encodeURIComponent(emoji)}`; }
+
+  // On click: animate small floating emoji and increment storage + update counts
+  function emojiClick(e, category, emoji){
+    // prevent cascading openPage if inside clickable card
+    e.stopPropagation();
+    triggerFloatingEmoji(e.clientX, e.clientY, emoji);
+    incrementEmojiCount(category, emoji);
+    animateBtn(e.currentTarget || e.target);
+  }
+
+  function animateBtn(btn){
+    try{
+      btn.style.transform = 'translateY(-6px) scale(1.08)';
+      setTimeout(()=> btn.style.transform = '', 160);
+    }catch(e){}
+  }
+
+  function triggerFloatingEmoji(x, y, emoji){
+    const el = document.createElement('div');
+    el.className = 'float-emoji';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.textContent = emoji;
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 1400);
+  }
+
+  function incrementEmojiCount(category, emoji){
+    const key = getKey(category, emoji);
+    let v = parseInt(localStorage.getItem(key) || '0', 10);
+    v = Math.max(0) + 1;
+    localStorage.setItem(key, v);
+    updateEmojiCounts(); // refresh UI
+  }
+
+  // find all counts elements and refresh from localStorage
+  function updateEmojiCounts(){
+    const countEls = document.querySelectorAll('.emoji-count');
+    countEls.forEach(el => {
+      const keyAttr = el.getAttribute('data-key');
+      if(keyAttr){
+        // keyAttr is like "category_emoji" (with emoji char)
+        const val = localStorage.getItem('pamana_emoji_' + keyAttr) || '0';
+        el.textContent = val;
+      }
+    });
+  }
+
+  // initialize counts on load
+  updateEmojiCounts();
+
+  /***** Welcome voice (autoplay attempt) *****/
+  const soundPill = document.getElementById('soundPill');
+  let greetingPlayed = false;
+
+  function makeGreetingUtterance(){
+    const text = "Maligayang pagdating sa Kamatuoran Tuklasin ang kultura at mga kwento ng Pilipinas.";
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'fil-PH';
+    u.rate = 1;
+    u.pitch = 1;
+    u.volume = 1;
+    return u;
+  }
+
+  async function attemptGreetingAutoplay(){
+    if(greetingPlayed) return;
+    // try Web Speech API
+    if('speechSynthesis' in window){
+      try {
+        const utter = makeGreetingUtterance();
+        // Some browsers require a user gesture; we attempt to speak and catch errors
+        window.speechSynthesis.cancel(); // reset
+        window.speechSynthesis.speak(utter);
+        // We can't reliably detect autoplay block, so set a timeout to mark played.
+        greetingPlayed = true;
+        // hide pill if visible
+        soundPill.style.display = 'none';
+      } catch(err){
+        // If error, show enable sound pill (user can tap)
+        showEnablePill();
+      }
+    } else {
+      // fallback: small beep using AudioContext
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = 520;
+        o.connect(ctx.destination);
+        o.start();
+        setTimeout(()=> { o.stop(); ctx.close(); }, 260);
+        greetingPlayed = true;
+      } catch(e){
+        showEnablePill();
+      }
+    }
+  }
+
+  function showEnablePill(){
+    soundPill.style.display = 'flex';
+    soundPill.onclick = userEnableSound;
+  }
+
+  function userEnableSound(){
+    // user gesture: speak greeting now
+    try {
+      const utter = makeGreetingUtterance();
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+      greetingPlayed = true;
+      soundPill.style.display = 'none';
+    } catch(e){
+      // fallback: try simple audio beep
+      try {
+        const a = new Audio();
+        // tiny dataURI beep (short) - generate by oscillator if needed
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        o.type = 'sine';
+        o.frequency.value = 540;
+        const g = ctx.createGain();
+        g.gain.value = 0.06;
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        setTimeout(()=> { o.stop(); ctx.close(); }, 300);
+        greetingPlayed = true;
+        soundPill.style.display = 'none';
+      } catch(err){
+        alert('Unable to play greeting on your device.');
+      }
+    }
+  }
+
+  // If user interacts anywhere (first click / touch), try to play greeting if not yet played
+  function firstInteractionHandler(){
+    if(!greetingPlayed) attemptGreetingAutoplay();
+    window.removeEventListener('pointerdown', firstInteractionHandler);
+    window.removeEventListener('touchstart', firstInteractionHandler);
+  }
+  window.addEventListener('pointerdown', firstInteractionHandler);
+  window.addEventListener('touchstart', firstInteractionHandler);
+
+  // On DOM ready, ensure emoji counts shown and prepare enable pill only if needed
+  document.addEventListener('DOMContentLoaded', () => {
+    updateEmojiCounts();
+    // Attach keyboard accessibility: space/enter on emoji buttons
+    document.querySelectorAll('.emoji-btn').forEach(btn => {
+      btn.setAttribute('tabindex','0');
+      btn.addEventListener('keydown', (ev) => {
+        if(ev.key === 'Enter' || ev.key === ' '){
+          ev.preventDefault();
+          const cat = btn.closest('.emoji-widget')?.dataset?.target;
+          const emoji = btn.dataset?.emoji;
+          if(cat && emoji) emojiClick(ev, cat, emoji);
+        }
+      });
+    });
+  });
+
+  // Expose some functions to console for debugging
+  window.pamana = {
+    incrementEmojiCount,
+    updateEmojiCounts,
+    triggerFloatingEmoji,
+    attemptGreetingAutoplay
+  };
+
+  // ensure counts update when page gets focus (in case user opens in multiple tabs)
+  window.addEventListener('focus', updateEmojiCounts);
+
+  // small UX: prevent emoji click from triggering parent openPage when clicking directly
+  document.querySelectorAll('.emoji-widget').forEach(w => {
+    w.addEventListener('click', (ev) => { ev.stopPropagation(); });
+  });
+
+  // If SpeechSynthesis voices aren't loaded immediately, attempt to load voices (no-op safe)
+  if('speechSynthesis' in window){
+    window.speechSynthesis.onvoiceschanged = () => { /* just ensure voices availability */ };
+  }
+</script>
+
+</body>
+</html>
